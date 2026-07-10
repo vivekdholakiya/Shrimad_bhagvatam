@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "121773571719",
+    "firebase_url": "https://bhagvat-puran-default-rtdb.firebaseio.com",
+    "project_id": "bhagvat-puran",
+    "storage_bucket": "bhagvat-puran.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:121773571719:android:1009432416af4ddc3f0222",
+        "android_client_info": {
+          "package_name": "com.example.bhagvatam_demo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyRwlP7F0EPo3Z-1BK5vJ5Z0V5XWgqPCg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:121773571719:android:f8ec38009fa95adb3f0222",
+        "android_client_info": {
+          "package_name": "com.vivek.shrimad.bhagvatam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyRwlP7F0EPo3Z-1BK5vJ5Z0V5XWgqPCg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

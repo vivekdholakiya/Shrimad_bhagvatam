@@ -1,4 +1,4 @@
-package com.example.shrimad_bhagavatam
+package com.vivek.shrimad.bhagvatam
 
 import io.flutter.embedding.android.FlutterActivity
 
