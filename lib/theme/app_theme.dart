@@ -1,183 +1,211 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'app_colors.dart';
 
+/// Reading mode enum used across all reading screens
+enum ReadingTheme { light, dark, sepia }
+
 class AppTheme {
-  static ThemeData lightTheme = ThemeData(
-    useMaterial3: true,
+  AppTheme._();
 
-    brightness: Brightness.dark,
-
-    scaffoldBackgroundColor: AppColors.background,
-
-    colorScheme: const ColorScheme(
-      brightness: Brightness.dark,
-
-      primary: AppColors.primary,
-      onPrimary: Colors.black,
-
-      secondary: AppColors.primaryLight,
-      onSecondary: Colors.black,
-
-      error: Colors.redAccent,
-      onError: Colors.white,
-
-      surface: AppColors.surface,
-      onSurface: AppColors.card,
-
-      tertiary: AppColors.primaryDark,
-      onTertiary: Colors.black,
-    ),
-
-    cardColor: AppColors.surface,
-
-    dividerColor: AppColors.divider,
-
-    appBarTheme: const AppBarTheme(
-      elevation: 0,
-      centerTitle: true,
-      backgroundColor: Colors.transparent,
-      foregroundColor: AppColors.primary,
-      surfaceTintColor: Colors.transparent,
-    ),
-
-    cardTheme: CardThemeData(
-      color: AppColors.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(
-          color: AppColors.border,
-          width: 1.2,
-        ),
-      ),
-    ),
-
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        minimumSize: const Size(double.infinity, 56),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-      ),
-    ),
-
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.primary,
-        side: const BorderSide(
-          color: AppColors.primary,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-      ),
-    ),
-
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: AppColors.surfaceVariant,
-
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide.none,
-      ),
-
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(
-          color: AppColors.border,
-        ),
-      ),
-
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: const BorderSide(
-          color: AppColors.primary,
-          width: 2,
-        ),
-      ),
-
-      labelStyle: const TextStyle(
-        color: AppColors.card,
-      ),
-    ),
-
-    iconTheme: const IconThemeData(
-      color: AppColors.primary,
-      size: 24,
-    ),
-
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: AppColors.surface,
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: Colors.white54,
-      type: BottomNavigationBarType.fixed,
-      elevation: 0,
-    ),
-
-    navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: AppColors.surface,
-      indicatorColor: AppColors.primary.withOpacity(.18),
-      labelTextStyle: WidgetStateProperty.all(
-        const TextStyle(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    ),
-
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.black,
-    ),
-
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
-        fontSize: 34,
-        fontWeight: FontWeight.bold,
-        color: AppColors.card,
-      ),
-
-      headlineLarge: TextStyle(
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-        color: AppColors.card,
-      ),
-
-      headlineMedium: TextStyle(
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        color: AppColors.card,
-      ),
-
-      titleLarge: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        color: AppColors.card,
-      ),
-
-      titleMedium: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: AppColors.card,
-      ),
-
-      bodyLarge: TextStyle(
-        fontSize: 16,
-        color: AppColors.card,
-      ),
-
-      bodyMedium: TextStyle(
-        fontSize: 14,
-        color: Colors.white70,
-      ),
-
-      bodySmall: TextStyle(
-        fontSize: 12,
-        color: Colors.white60,
-      ),
-    ),
+  // ─────────────────────────────────────────────
+  //  LIGHT THEME
+  // ─────────────────────────────────────────────
+  static ThemeData lightTheme = _buildTheme(
+    brightness: Brightness.light,
+    scaffold: AppColors.cream,
+    surface: AppColors.warmWhite,
+    card: AppColors.cardLight,
+    primary: AppColors.maroon,
+    secondary: AppColors.saffron,
+    onPrimary: Colors.white,
+    onSurface: AppColors.textDark,
+    textPrimary: AppColors.textDark,
+    textSecondary: AppColors.textMedium,
+    border: AppColors.border,
+    divider: AppColors.divider,
+    statusBar: SystemUiOverlayStyle.dark,
   );
+
+  // ─────────────────────────────────────────────
+  //  DARK THEME
+  // ─────────────────────────────────────────────
+  static ThemeData darkTheme = _buildTheme(
+    brightness: Brightness.dark,
+    scaffold: AppColors.darkBase,
+    surface: AppColors.darkSurface,
+    card: AppColors.darkCard,
+    primary: AppColors.gold,
+    secondary: AppColors.saffron,
+    onPrimary: AppColors.darkBase,
+    onSurface: Colors.white,
+    textPrimary: const Color(0xFFF5E8C8),
+    textSecondary: const Color(0xFFD4A96A),
+    border: AppColors.borderDark,
+    divider: const Color(0xFF3D2020),
+    statusBar: SystemUiOverlayStyle.light,
+  );
+
+  static ThemeData _buildTheme({
+    required Brightness brightness,
+    required Color scaffold,
+    required Color surface,
+    required Color card,
+    required Color primary,
+    required Color secondary,
+    required Color onPrimary,
+    required Color onSurface,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color border,
+    required Color divider,
+    required SystemUiOverlayStyle statusBar,
+  }) {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      scaffoldBackgroundColor: scaffold,
+      colorScheme: ColorScheme(
+        brightness: brightness,
+        primary: primary,
+        onPrimary: onPrimary,
+        secondary: secondary,
+        onSecondary: onPrimary,
+        error: AppColors.error,
+        onError: Colors.white,
+        surface: surface,
+        onSurface: onSurface,
+      ),
+      cardColor: card,
+      dividerColor: divider,
+
+      appBarTheme: AppBarTheme(
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: primary,
+        surfaceTintColor: Colors.transparent,
+        systemOverlayStyle: statusBar,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Georgia',
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: primary,
+          letterSpacing: 0.3,
+        ),
+      ),
+
+      cardTheme: CardThemeData(
+        color: card,
+        elevation: 0,
+        shadowColor: AppColors.shadow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: border, width: 1.2),
+        ),
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: onPrimary,
+          elevation: 0,
+          minimumSize: const Size(double.infinity, 52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primary,
+          side: BorderSide(color: primary, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+
+      iconTheme: IconThemeData(color: primary, size: 24),
+
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: surface,
+        selectedItemColor: primary,
+        unselectedItemColor: textSecondary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 11,
+        ),
+      ),
+
+      textTheme: TextTheme(
+        displayLarge: TextStyle(
+          fontFamily: 'Georgia',
+          fontSize: 34,
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+          height: 1.2,
+        ),
+        headlineLarge: TextStyle(
+          fontFamily: 'Georgia',
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+          height: 1.3,
+        ),
+        headlineMedium: TextStyle(
+          fontFamily: 'Georgia',
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: textPrimary,
+          height: 1.3,
+        ),
+        titleLarge: TextStyle(
+          fontFamily: 'Georgia',
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: textPrimary,
+          letterSpacing: 0.2,
+        ),
+        titleMedium: TextStyle(
+          fontFamily: 'Georgia',
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+        ),
+        titleSmall: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: textSecondary,
+          letterSpacing: 0.5,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          color: textPrimary,
+          height: 1.7,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          color: textSecondary,
+          height: 1.6,
+        ),
+        bodySmall: TextStyle(
+          fontSize: 12,
+          color: textSecondary,
+          height: 1.5,
+        ),
+      ),
+    );
+  }
 }

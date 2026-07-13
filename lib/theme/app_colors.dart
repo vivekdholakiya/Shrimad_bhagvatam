@@ -1,28 +1,55 @@
 import 'package:flutter/material.dart';
 
+/// ─────────────────────────────────────────────────
+///  AppColors — Devotional Palette
+///  Deep Maroon + Saffron + Gold on Warm Cream base
+/// ─────────────────────────────────────────────────
 class AppColors {
   AppColors._();
 
-  // Gold
-  static const primary = Color(0xFFD4AF37);
-  static const primaryLight = Color(0xFFE8C76A);
-  static const primaryDark = Color(0xFFB8892F);
+  // ── Brand / Primary ────────────────────────────
+  static const maroon = Color(0xFF6B1A1A);      // Deep temple maroon
+  static const maroonLight = Color(0xFF9B3A3A);
+  static const maroonDark = Color(0xFF4A0E0E);
 
-  // Background
-  static const background = Color(0xFF1A120B);
-  static const surface = Color(0xff6A4B2A);
-  static const surfaceVariant = Color(0xFF4A2C1E);
+  // ── Accent ─────────────────────────────────────
+  static const saffron = Color(0xFFE8832A);     // Saffron orange
+  static const saffronLight = Color(0xFFF5A855);
+  static const gold = Color(0xFFCB9B1E);        // Gold accent
+  static const goldLight = Color(0xFFE8C040);
+  static const goldGlow = Color(0xFFF5D56E);
 
-  // Cards
-  static const card = Color(0xFFF8F1E3);
-  static const cardDark = Color(0xFFF4E6C5);
+  // ── Light Mode Backgrounds ──────────────────────
+  static const cream = Color(0xFFFAF6F0);       // Soft cream base
+  static const warmWhite = Color(0xFFFFFDF8);
+  static const cardLight = Color(0xFFFFF9F0);
 
-  // Text
-  static const textDark = Color(0xff402518);
-  static const textLight = Color(0xFFF8F1E3);
+  // ── Dark Mode Backgrounds ───────────────────────
+  static const darkBase = Color(0xFF1A0E0E);    // Deep charcoal-maroon
+  static const darkSurface = Color(0xFF251515);
+  static const darkCard = Color(0xFF2E1A1A);
+  static const darkElevated = Color(0xFF3A2020);
 
-  // Others
-  static const border = Color(0xFFB8892F);
-  static const divider = Color(0xFF7C5B34);
-  static const goldGlow = Color(0xFFF6D365);
+  // ── Sepia Backgrounds ──────────────────────────
+  static const sepiaBg = Color(0xFFF4EDDC);
+  static const sepiaCard = Color(0xFFEEE4CA);
+  static const sepiaText = Color(0xFF3D2B0E);
+
+  // ── Text ───────────────────────────────────────
+  static const textDark = Color(0xFF2F1B0E);
+  static const textMedium = Color(0xFF6B4E35);
+  static const textLight = Color(0xFF9E7A5C);
+
+  // ── Borders & Dividers ──────────────────────────
+  static const border = Color(0xFFE6D5B8);
+  static const divider = Color(0xFFF0E5CF);
+  static const borderDark = Color(0xFF3D2020);
+
+  // ── Status ─────────────────────────────────────
+  static const success = Color(0xFF4E8B52);
+  static const error = Color(0xFFC94A42);
+
+  // ── Shadow ─────────────────────────────────────
+  static const shadow = Color(0x20000000);
+  static const shadowGold = Color(0x30CB9B1E);
 }
