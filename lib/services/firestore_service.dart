@@ -4,6 +4,7 @@ import '../models/canto_model.dart';
 import '../models/chapter_model.dart';
 import '../models/verse_model.dart';
 import 'cache_service.dart';
+import 'network_service.dart';
 
 /// FirestoreService — cache-first, read-only access to Firestore.
 ///
@@ -80,22 +81,28 @@ class FirestoreService {
 
   Future<List<CantoModel>> _fetchCantos(String cacheKey) async {
     try {
-      final snapshot = await _db.collection('bhagavat').get();
+      final cantos = await NetworkService.instance.run(
+            () async {
+          final snapshot = await _db.collection('bhagavat').get();
 
-      // Parallelize the chapter-count lookup for every canto instead of
-      // awaiting them one-by-one.
-      final cantos = await Future.wait(snapshot.docs.map((doc) async {
-        final countSnap =
-        await doc.reference.collection('chapters').count().get();
+          // Parallelize the chapter-count lookup for every canto instead of
+          // awaiting them one-by-one.
+          final result = await Future.wait(snapshot.docs.map((doc) async {
+            final countSnap =
+            await doc.reference.collection('chapters').count().get();
 
-        return CantoModel.fromFirestore(
-          doc.data(),
-          doc.id,
-          chapterCount: countSnap.count ?? 0,
-        );
-      }));
+            return CantoModel.fromFirestore(
+              doc.data(),
+              doc.id,
+              chapterCount: countSnap.count ?? 0,
+            );
+          }));
 
-      cantos.sort((a, b) => a.cantoNumber.compareTo(b.cantoNumber));
+          result.sort((a, b) => a.cantoNumber.compareTo(b.cantoNumber));
+          return result;
+        },
+        debugLabel: 'getCantos',
+      );
 
       await _cache.setString(cacheKey, CantoModel.encodeList(cantos));
 
@@ -103,6 +110,8 @@ class FirestoreService {
     } catch (e, s) {
       _log('$e\n$s');
 
+      // Cache fallback: if we have anything stale, prefer showing that
+      // over a hard error — especially important for NoConnectionException.
       final cached = _cache.getString(cacheKey);
       if (cached != null) return CantoModel.decodeList(cached);
 
@@ -151,27 +160,33 @@ class FirestoreService {
       String cacheKey,
       ) async {
     try {
-      final cantoDocId = 'canto_$cantoNumber';
+      final chapters = await NetworkService.instance.run(
+            () async {
+          final cantoDocId = 'canto_$cantoNumber';
 
-      final snapshot = await _db
-          .collection('bhagavat')
-          .doc(cantoDocId)
-          .collection('chapters')
-          .get();
+          final snapshot = await _db
+              .collection('bhagavat')
+              .doc(cantoDocId)
+              .collection('chapters')
+              .get();
 
-      final chapters = await Future.wait(snapshot.docs.map((doc) async {
-        final countSnap =
-        await doc.reference.collection('verses').count().get();
+          final result = await Future.wait(snapshot.docs.map((doc) async {
+            final countSnap =
+            await doc.reference.collection('verses').count().get();
 
-        return ChapterModel.fromFirestore(
-          doc.data(),
-          doc.id,
-          cantoNumber,
-          verseCount: countSnap.count ?? 0,
-        );
-      }));
+            return ChapterModel.fromFirestore(
+              doc.data(),
+              doc.id,
+              cantoNumber,
+              verseCount: countSnap.count ?? 0,
+            );
+          }));
 
-      chapters.sort((a, b) => a.chapterNumber.compareTo(b.chapterNumber));
+          result.sort((a, b) => a.chapterNumber.compareTo(b.chapterNumber));
+          return result;
+        },
+        debugLabel: 'getChapters($cantoNumber)',
+      );
 
       await _cache.setString(cacheKey, ChapterModel.encodeList(chapters));
 
@@ -233,23 +248,28 @@ class FirestoreService {
       String cacheKey,
       ) async {
     try {
-      final snapshot = await _db
-          .collection('bhagavat')
-          .doc('canto_$cantoNumber')
-          .collection('chapters')
-          .doc('chapter_$chapterNumber')
-          .collection('verses')
-          .get();
+      final verses = await NetworkService.instance.run(
+            () async {
+          final snapshot = await _db
+              .collection('bhagavat')
+              .doc('canto_$cantoNumber')
+              .collection('chapters')
+              .doc('chapter_$chapterNumber')
+              .collection('verses')
+              .get();
 
-      final verses = snapshot.docs.map((doc) {
-        return VerseModel.fromFirestore(
-          doc.data(),
-          doc.id,
-          chapterNumber,
-          cantoNumber,
-        );
-      }).toList()
-        ..sort((a, b) => a.verseNumber.compareTo(b.verseNumber));
+          return snapshot.docs.map((doc) {
+            return VerseModel.fromFirestore(
+              doc.data(),
+              doc.id,
+              chapterNumber,
+              cantoNumber,
+            );
+          }).toList()
+            ..sort((a, b) => a.verseNumber.compareTo(b.verseNumber));
+        },
+        debugLabel: 'getVerses($cantoNumber,$chapterNumber)',
+      );
 
       await _cache.setString(cacheKey, VerseModel.encodeList(verses));
 

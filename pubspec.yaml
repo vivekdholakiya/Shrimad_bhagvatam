@@ -20,8 +20,10 @@ dependencies:
   # Fonts
   google_fonts: ^6.2.1
 
-  # Sharing
-  #  share_plus:
+  # Sharing — powers the Share button in the verse reader, which was
+  # previously wired to a UI element with no working implementation
+  # behind it (Share.share(text) was commented out).
+  share_plus: ^13.0.0
 
   cupertino_icons: ^1.0.8
 

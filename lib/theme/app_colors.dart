@@ -48,6 +48,28 @@ class AppColors {
   // ── Status ─────────────────────────────────────
   static const success = Color(0xFF4E8B52);
   static const error = Color(0xFFC94A42);
+  static const warning = Color(0xFFC9762E); // Warm orange — added for redesign
+
+  // ── Surface (redesign) ──────────────────────────
+  // "Soft Beige" surface distinct from `warmWhite`/`cardLight` — used by the
+  // new AppCard/AppHeader so redesigned screens have one consistent surface
+  // tone instead of each screen picking its own off-white.
+  static const surfaceBeige = Color(0xFFF3E9D8);
+  static const surfaceBeigeDark = Color(0xFF2A1E14);
+
+  // ── Semantic aliases (redesign) ──────────────────
+  // The redesign brief speaks in terms of primary/secondary/accent rather
+  // than maroon/saffron/gold. Rather than rename the underlying tokens
+  // (which every existing screen already references), we alias them so new
+  // components read semantically while old screens keep working untouched.
+  static const primary = saffron;
+  static const primaryDark = Color(0xFFC96A1A);
+  static const secondary = gold;
+  static const accent = maroon;
+
+  // ── Glass effect (redesign) ─────────────────────
+  static const glassLight = Color(0xCCFFFDF8); // warmWhite @ 80%
+  static const glassDark = Color(0xCC251515); // darkSurface @ 80%
 
   // ── Shadow ─────────────────────────────────────
   static const shadow = Color(0x20000000);

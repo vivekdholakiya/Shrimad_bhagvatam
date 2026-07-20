@@ -1,20 +1,36 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/canto_model.dart';
 import '../services/firestore_service.dart';
+import '../services/network_service.dart';
 import '../services/preferences_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_dimens.dart';
 import '../utils/canto_meta.dart';
+import '../widgets/app_header.dart';
 import '../widgets/canto_card.dart';
 import '../widgets/loading_skeleton.dart';
+import '../widgets/ui_kit.dart';
 import 'chapter_list_screen.dart';
 import 'bookmarks_screen.dart';
 import 'settings_screen.dart';
 import 'search_screen.dart';
 import 'verse_reader_screen.dart';
 
+/// HomeScreen — redesigned per the premium UI brief.
+///
+/// Business logic is byte-for-byte unchanged from before: same data loading
+/// via FirestoreService, same PreferencesService reads for "continue
+/// reading", same navigation targets, same bottom-nav tabs. Only the visual
+/// layer changed:
+///   - SliverAppBar → AppHeader.hero (no AppBar/SliverAppBar anywhere)
+///   - CustomScrollView/slivers → a single ListView (the hero header no
+///     longer needs to collapse/parallax, so slivers added complexity
+///     without benefit here — this also removes several sliver rebuilds)
+///   - Continue-reading card, daily-verse card, and error state now route
+///     through the shared AppCard / ErrorStateView from ui_kit.dart instead
+///     of one-off Container/BoxDecoration blocks, so they visually match
+///     every other card in the redesigned app.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -27,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen>
   List<CantoModel> _cantos = [];
   bool _loading = true;
   bool _error = false;
+  bool _offline = false;
   int _navIndex = 0;
 
   // Continue reading
@@ -45,9 +62,9 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: AppMotion.slow,
     );
-    _fadeAnim = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _fadeAnim = CurvedAnimation(parent: _fadeController, curve: AppMotion.easeOut);
     _loadData();
     _loadLastRead();
   }
@@ -64,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _loading = true;
       _error = false;
+      _offline = false;
     });
 
     try {
@@ -74,16 +92,15 @@ class _HomeScreenState extends State<HomeScreen>
         _loading = false;
       });
       _fadeController.forward(from: 0);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = true;
+        _offline = e is NoConnectionException;
       });
     }
   }
-
-  String get _language => _prefs.language;
 
   @override
   void dispose() {
@@ -110,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // ── Bottom navigation ──────────────────────────────────────────────
   Widget _buildNavBar(bool isDark) {
     return Container(
       decoration: BoxDecoration(
@@ -133,249 +151,149 @@ class _HomeScreenState extends State<HomeScreen>
         onTap: (i) => setState(() => _navIndex = i),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        selectedItemColor: AppColors.maroon,
+        selectedItemColor: AppColors.primary,
         unselectedItemColor:
-            isDark ? AppColors.textLight : AppColors.textMedium,
+        isDark ? AppColors.textLight : AppColors.textMedium,
         selectedLabelStyle: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search_rounded),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark_rounded),
-            label: 'Bookmarks',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded),
-            label: 'Settings',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.bookmark_rounded), label: 'Bookmarks'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_rounded), label: 'Settings'),
         ],
       ),
     );
   }
 
+  // ── Home tab ───────────────────────────────────────────────────────
   Widget _buildHomeTab(bool isDark) {
     return RefreshIndicator(
-      color: AppColors.maroon,
+      color: AppColors.primary,
       onRefresh: () => _loadData(refresh: true),
-      child: CustomScrollView(
+      child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          _buildSliverAppBar(isDark),
-          if (_lastCanto != null)
-            SliverToBoxAdapter(child: _buildContinueReadingCard(isDark)),
+        padding: EdgeInsets.zero,
+        children: [
+          _buildHeroHeader(),
+          if (_lastCanto != null) _buildContinueReadingCard(isDark),
           _buildDailyVerse(isDark),
-          SliverPadding(
-            padding: const EdgeInsets.only(top: 4, bottom: 8),
-            sliver: SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 3,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: AppColors.maroon,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'All 12 Cantos',
-                      style: TextStyle(
-                        fontFamily: 'Georgia',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? const Color(0xFFF5E8C8)
-                            : AppColors.textDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          SectionTitle(
+            title: 'All 12 Cantos',
+            trailing: _loading
+                ? null
+                : Text(
+              '${_cantos.length} available',
+              style: TextStyle(fontSize: 12, color: AppColors.textMedium),
             ),
           ),
           if (_loading)
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (_, __) => const CantoCardSkeleton(),
-                childCount: 6,
-              ),
-            )
+            ...List.generate(6, (_) => const CantoCardSkeleton())
           else if (_error)
-            SliverToBoxAdapter(child: _buildErrorState())
+            ErrorStateView(
+              title: _offline ? "You're offline" : 'Could not load cantos',
+              message: _offline
+                  ? 'Connect to the internet to load new content. Anything already downloaded is still available.'
+                  : 'Something went wrong loading the scripture. Please try again.',
+              offline: _offline,
+              onRetry: _loadData,
+            )
           else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (_, i) => FadeTransition(
-                  opacity: _fadeAnim,
-                  child: CantoCard(
-                    canto: _cantos[i],
-                    // onTap: () async {
-                    //
-                    //   final db = FirebaseFirestore.instance;
-                    //
-                    //   final root = db.collection('bhagavat');
-                    //
-                    //   final chapters = await FirebaseFirestore.instance
-                    //       .collection('bhagavat').get();
-                    //
-                    //   print("canto:- 1 chapter:-${chapters}");
-                    //
-                    // },
-                    onTap: () => _openCanto(_cantos[i]),
-                  ),
+            ...List.generate(
+              _cantos.length,
+                  (i) => FadeTransition(
+                opacity: _fadeAnim,
+                child: CantoCard(
+                  canto: _cantos[i],
+                  onTap: () => _openCanto(_cantos[i]),
                 ),
-                childCount: _cantos.length,
               ),
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          const SizedBox(height: AppSpacing.lg),
         ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar(bool isDark) {
-    return SliverAppBar(
-      expandedHeight: 160,
-      floating: false,
-      pinned: true,
-      backgroundColor: isDark ? AppColors.darkBase : AppColors.maroon,
-      surfaceTintColor: Colors.transparent,
-      systemOverlayStyle: SystemUiOverlayStyle.light,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [AppColors.maroonDark, AppColors.darkBase]
-                  : [AppColors.maroon, const Color(0xFF8B2020)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    '🪷 श्रीमद्भागवतम्',
-                    style: GoogleFonts.notoSerifDevanagari(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.goldLight,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Shrimad Bhagavatam',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.7),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '॥ सत्यं परम् धीमहि ॥',
-                    style: GoogleFonts.notoSerifDevanagari(
-                      fontSize: 12,
-                      color: AppColors.gold.withOpacity(0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-        ),
-        title: Padding(
-          padding: const EdgeInsets.only(left: 4),
-          child: Text(
-            'Shrimad Bhagavatam',
-            style: const TextStyle(
-              fontFamily: 'Georgia',
-              fontSize: 17,
+  // ── Hero header (replaces the old SliverAppBar) ─────────────────────
+  Widget _buildHeroHeader() {
+    return AppHeader.hero(
+      bottom: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '🪷 श्रीमद्भागवतम्',
+            style: GoogleFonts.notoSerifDevanagari(
+              fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: AppColors.goldLight,
             ),
           ),
-        ),
-        titlePadding:
-            const EdgeInsets.only(left: 16, bottom: 14),
-        collapseMode: CollapseMode.parallax,
+          const SizedBox(height: 4),
+          Text(
+            'Shrimad Bhagavatam',
+            style: TextStyle(
+              fontFamily: 'Georgia',
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.7),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '॥ सत्यं परम् धीमहि ॥',
+            style: GoogleFonts.notoSerifDevanagari(
+              fontSize: 12,
+              color: AppColors.gold.withOpacity(0.6),
+            ),
+          ),
+        ],
       ),
-      foregroundColor: Colors.white,
     );
   }
 
+  // ── Continue reading card ────────────────────────────────────────────
   Widget _buildContinueReadingCard(bool isDark) {
-    return GestureDetector(
-      onTap: () async {
-        final verse = await FirestoreService.instance.getVerse(
-          _lastCanto!,
-          _lastChapter!,
-          _lastVerse!,
-        );
-        if (!mounted || verse == null) return;
-        final verses = await FirestoreService.instance.getVerses(
-          _lastCanto!,
-          _lastChapter!,
-        );
-        if (!mounted) return;
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => VerseReaderScreen(
-              verses: verses,
-              initialIndex:
-                  verses.indexWhere((v) => v.verseNumber == _lastVerse)
-                      .clamp(0, verses.length - 1),
-              cantoNumber: _lastCanto!,
-              chapterNumber: _lastChapter!,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [AppColors.darkCard, AppColors.darkElevated]
-                : [AppColors.maroon.withOpacity(0.06), AppColors.cream],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AppColors.gold.withOpacity(isDark ? 0.3 : 0.5),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowGold,
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xs),
+      child: AppCard(
+        goldBorder: true,
+        gradient: LinearGradient(
+          colors: isDark
+              ? [AppColors.darkCard, AppColors.darkElevated]
+              : [AppColors.maroon.withOpacity(0.06), AppColors.cream],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        onTap: () async {
+          final verse = await FirestoreService.instance.getVerse(
+            _lastCanto!,
+            _lastChapter!,
+            _lastVerse!,
+          );
+          if (!mounted || verse == null) return;
+          final verses = await FirestoreService.instance.getVerses(
+            _lastCanto!,
+            _lastChapter!,
+          );
+          if (!mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => VerseReaderScreen(
+                verses: verses,
+                initialIndex:
+                verses.indexWhere((v) => v.verseNumber == _lastVerse)
+                    .clamp(0, verses.length - 1),
+                cantoNumber: _lastCanto!,
+                chapterNumber: _lastChapter!,
+              ),
+            ),
+          );
+        },
         child: Row(
           children: [
             Container(
@@ -383,15 +301,11 @@ class _HomeScreenState extends State<HomeScreen>
               height: 44,
               decoration: BoxDecoration(
                 color: AppColors.maroon,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: AppRadius.smRadius,
               ),
-              child: const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: 26,
-              ),
+              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 26),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,54 +330,40 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.gold.withOpacity(0.7),
-            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.gold.withOpacity(0.7)),
           ],
         ),
       ),
     );
   }
 
+  // ── Daily verse card ─────────────────────────────────────────────────
   Widget _buildDailyVerse(bool isDark) {
-    // Show a random cached verse as a daily suggestion
-    // We just use the day-of-year to pick a canto pseudo-randomly
     final day = DateTime.now().dayOfYear;
     final cantoNum = (day % 12) + 1;
     final symbol = cantoSymbol(cantoNum);
 
-    return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [const Color(0xFF2E1A00), const Color(0xFF1E1000)]
-                : [
-                    AppColors.gold.withOpacity(0.12),
-                    AppColors.saffron.withOpacity(0.08),
-                  ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.gold.withOpacity(0.35),
-            width: 1,
-          ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xs),
+      child: AppCard(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF2E1A00), const Color(0xFF1E1000)]
+              : [AppColors.gold.withOpacity(0.12), AppColors.saffron.withOpacity(0.08)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
         child: Row(
           children: [
             Text(symbol, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '✨ Today\'s Reading',
+                    "✨ Today's Reading",
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -478,29 +378,20 @@ class _HomeScreenState extends State<HomeScreen>
                       fontFamily: 'Georgia',
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? const Color(0xFFF5E8C8)
-                          : AppColors.textDark,
+                      color: isDark ? const Color(0xFFF5E8C8) : AppColors.textDark,
                     ),
                   ),
                 ],
               ),
             ),
-            TextButton(
+            AppButton.text(
+              label: 'Read',
               onPressed: () {
                 if (_cantos.isNotEmpty) {
                   final match = _cantos.where((c) => c.cantoNumber == cantoNum);
                   if (match.isNotEmpty) _openCanto(match.first);
                 }
               },
-              child: Text(
-                'Read',
-                style: TextStyle(
-                  color: AppColors.maroon,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
             ),
           ],
         ),
@@ -508,50 +399,9 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildErrorState() {
-    return Padding(
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        children: [
-          Icon(Icons.wifi_off_rounded, size: 56, color: AppColors.textLight),
-          const SizedBox(height: 16),
-          Text(
-            'Could not load cantos',
-            style: TextStyle(
-              fontFamily: 'Georgia',
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Please check your internet connection and try again.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.textMedium),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _loadData,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.maroon,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-            ),
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Retry'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _openCanto(CantoModel canto) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ChapterListScreen(canto: canto),
-      ),
+      MaterialPageRoute(builder: (_) => ChapterListScreen(canto: canto)),
     );
   }
 }

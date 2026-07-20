@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/verse_model.dart';
 import '../services/preferences_service.dart';
 import '../theme/app_colors.dart';
@@ -71,7 +72,7 @@ class _VerseReaderScreenState extends State<VerseReaderScreen> {
     return _prefs.isBookmarked(v.cantoNumber, v.chapterNumber, v.verseNumber);
   }
 
-  void _share() {
+  Future<void> _share() async {
     final v = _currentVerse;
     final translation = v.translation(_language);
     final text = '''
@@ -85,7 +86,27 @@ Translation: $translation
 
 — Śrīmad-Bhāgavatam, Canto ${v.cantoNumber}, Chapter ${v.chapterNumber}, Verse ${v.verseNumber}
     '''.trim();
-    // Share.share(text);
+
+    // sharePositionOrigin is required on iPad — without it share_plus can
+    // silently fail or crash there. We derive it from this screen's own
+    // RenderBox rather than adding a GlobalKey just for the share button.
+    final box = context.findRenderObject() as RenderBox?;
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: text,
+          subject: 'Shrimad Bhagavatam ${v.fullRef}',
+          sharePositionOrigin:
+          box != null ? (box.localToGlobal(Offset.zero) & box.size) : null,
+        ),
+      );
+    } catch (e) {
+      // Sharing is a non-critical, user-initiated action — fail silently
+      // in release rather than crashing the reading experience, but keep
+      // the signal in debug builds.
+      if (kDebugMode) debugPrint('Share failed: $e');
+    }
   }
 
   void _cycleFontSize() {
@@ -378,9 +399,9 @@ Translation: $translation
                             size: 32),
                         onPressed: _currentIndex > 0
                             ? () => _pageController.previousPage(
-                                  duration: const Duration(milliseconds: 350),
-                                  curve: Curves.easeInOut,
-                                )
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeInOut,
+                        )
                             : null,
                       ),
                       const SizedBox(width: 4),
@@ -400,13 +421,13 @@ Translation: $translation
                                 : _accentColor.withOpacity(0.3),
                             size: 32),
                         onPressed:
-                            _currentIndex < widget.verses.length - 1
-                                ? () => _pageController.nextPage(
-                                      duration:
-                                          const Duration(milliseconds: 350),
-                                      curve: Curves.easeInOut,
-                                    )
-                                : null,
+                        _currentIndex < widget.verses.length - 1
+                            ? () => _pageController.nextPage(
+                          duration:
+                          const Duration(milliseconds: 350),
+                          curve: Curves.easeInOut,
+                        )
+                            : null,
                       ),
                     ],
                   ),
@@ -482,7 +503,7 @@ class _VersePage extends StatelessWidget {
           Center(
             child: Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 border: Border.all(
                     color: accentColor.withOpacity(0.3), width: 1),
